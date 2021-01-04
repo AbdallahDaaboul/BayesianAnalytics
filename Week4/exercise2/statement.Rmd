@@ -1,0 +1,248 @@
+---
+title: "Effect of bottom coverage to larval presence"
+subtitle: "Week4-ex3, solution"
+output: pdf_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggplot2)
+library(StanHeaders)
+library(rstan)
+
+library(coda)
+set.seed(123)
+options(mc.cores = parallel::detectCores())
+rstan_options(auto_write = TRUE)
+```
+
+Let's first explore the data a bit more.
+```{r}
+# Read the data
+data = read.csv("white_fishes_data.csv")
+# Form a data table for sites without bottom vegetation
+y.noveg = table(data$AREANAME[data$BOTTOMCOV==0], data$WHIBIN[data$BOTTOMCOV==0])
+colnames(y.noveg) <- c("y=0","y=1")
+N.noveg = rowSums(y.noveg)
+# Form a data table for sites with bottom vegetation
+y.veg = table(data$AREANAME[data$BOTTOMCOV==1], data$WHIBIN[data$BOTTOMCOV==1])
+colnames(y.veg) <- c("y=0","y=1")
+N.veg = rowSums(y.veg)
+
+par(mfrow=c(1,2))
+plot(N.veg, main="Number of sampling sites", xlab="Area index", ylab="Number of sites")
+points(N.noveg, col="red")
+legend(1, 39, c("veg.","no veg."),col=c("black","red"), pch=1, cex=1, box.lty=1)
+plot(y.veg[,2]/N.veg, main="proportion of sites with whitefish", xlab="Area index", ylab="proportion")
+points(y.noveg[,2]/N.noveg, col="red")
+print(y.veg)
+```
+
+# Part 1
+
+## The model
+
+```{r}
+model="
+  data{
+   int i;
+   int c;
+   int <lower = 0> N[i,c];
+   int <lower = 0> y[i,c];
+   
+  }
+  
+  parameters{
+    real <lower = 0, upper = 1> mu[c];
+    real <lower = 0> s[c];
+    real <lower = 0,upper = 1>  theta[i,c];
+  }
+  
+  model{
+    
+    for (j in 1:c){
+      mu[j] ~ uniform(0,1);
+    }
+    
+    for (j in 1:c){
+      s[j] ~ lognormal(4,2);
+    }
+    
+    for(j in 1:i){
+      for(k in 1:c){
+        theta[j,k] ~ beta( mu[k] * s[k] , s[k] - mu[k] * s[k]);
+      }
+    }
+        
+    for(j in 1:i){
+      for(k in 1:c){
+        y[j,k] ~ binomial(N[j,k],theta[j,k]);
+      }
+    }
+    
+  }
+
+"
+```
+
+```{r}
+dataset <- list("c"=2,"i"=19,"y" = cbind(y.noveg[,2],append(y.veg[,2], 0, after = 6)),"N"=cbind(N.noveg,append(N.veg, 0, after = 6)) )
+#give
+
+init1 = list(y=0)
+init2 = list(y=10)
+init3 = list(y=20)
+
+inits <- list(init1, init2, init3)
+# stan function does all of the work of fitting a Stan model and
+# returning the results as an instance of stanfit = post in our exercises.
+post=stan(model_code=model,data=dataset,init=inits,warmup=500,iter=1000,chains=3,thin=1)
+```
+
+### Summary posterior mu
+
+```{r}
+summary(post,pars="mu", probs = c(0.025, 0.975))
+```
+
+### Summary posterior s
+
+```{r}
+summary(post,pars="s", probs = c(0.025, 0.975))
+```
+### Summary posterior theta
+
+```{r}
+summary(post,pars="theta", probs = c(0.025, 0.975))
+```
+
+### Autocorrelation mu
+
+```{r}
+stan_ac(post,"mu",inc_warmup = FALSE, lags = 25, fun.data = "mean_se")
+```
+
+
+### Autocorrelation Theta
+
+
+```{r}
+stan_ac(post,"theta",inc_warmup = FALSE, lags = 25, fun.data = "mean_se")
+```
+
+### Autocorrelation s
+
+
+
+```{r}
+stan_ac(post,"s",inc_warmup = FALSE, lags = 25, fun.data = "mean_se")
+```
+
+
+
+#### Visualize the posterior
+
+
+```{r}
+#plot histogram of the posterior of lambda (approximation for density function)
+plot(post, plotfun = "hist", pars = "mu",bins=50)
+```
+
+```{r}
+#plot histogram of the posterior of lambda (approximation for density function)
+plot(post, plotfun = "hist", pars = "s",bins=50)
+```
+
+
+
+
+
+```{r}
+plot(post, plotfun = "hist", pars = "theta",bins=50)
+```
+
+## Part 2
+
+### Posterior $\delta\mu$
+
+```{r}
+muSamp=as.matrix(post, pars ="mu")
+#muSamp
+hist(muSamp[,1]-muSamp[,2])
+```
+
+### Posterior $\delta\phi$
+
+```{r}
+thetaSamp=as.matrix(post, pars ="theta")
+#thetaSamp
+for (i in 1:19){
+  hist(thetaSamp[,i] - thetaSamp[,i+19])
+}
+```
+
+## Part 3
+
+### y0 predictions nonvege, y1 predictions vege for N_19 = 20 
+
+```{r}
+y0 = rep(0 , dim(thetaSamp)[1])
+y1 = rep(0 , dim(thetaSamp)[1])
+
+for ( i in 1:dim(thetaSamp)[1] ){
+  y0[i] = rbinom(1,10,thetaSamp[i,19]);
+  y1[i] = rbinom(1,10,thetaSamp[i,38]);
+}
+```
+
+```{r}
+hist(y0)
+hist(y1)
+hist(y0 - y1)
+```
+
+## Part 4
+
+### y200 predictions nonvege, y201 predictions vege for N_20 = 10 
+
+```{r}
+sSamp=as.matrix(post, pars ="s")
+newThetaSamp = rep (0,dim(sSamp)[1])
+newThetaSamp2 = rep (0,dim(sSamp)[1])
+
+for (k in 1:dim(sSamp)[1]){
+ newThetaSamp[k] = rbeta(1,muSamp[k,1] * sSamp[k,1] , sSamp[k,1]- muSamp[k,1] * sSamp[k,1]) 
+}
+
+for (k in 1:dim(sSamp)[1]){
+ newThetaSamp2[k] = rbeta(1,muSamp[k,2] * sSamp[k,2] , sSamp[k,2]- muSamp[k,2] * sSamp[k,2]) 
+}
+
+y200 = rep(0 , dim(sSamp)[1])
+y201 = rep(0 , dim(sSamp)[1])
+
+for ( i in 1:dim(sSamp)[1] ){
+  y200[i] = rbinom(1,10,newThetaSamp[i]);
+  y201[i] = rbinom(1,10,newThetaSamp2[i]);
+}
+
+hist(y200)
+hist(y201)
+hist(y200 - y201)
+
+#theta[j,k] ~ beta( mu[k] * s[k] , s[k] - mu[k] * s[k]);
+```
+### Task 5
+
+in the last model we are predicting everything from zero. Starting by s to mu to theta and finally y. Therefore it may contain more error than the one before it. Therefore i will take the model of 2.4 instead.
+
+# Grading
+
+**Total 20 points** Each of the steps provides 4 points from correct answer and 2 points from an answer that is towards the right direction but includes minor mistake (e.g. a bug or typo)
+
+
+# References
+
+Lari Veneranta, Richard Hudd and Jarno Vanhatalo (2013). Reproduction areas of sea-spawning Coregonids reflect the environment in shallow coastal waters. Marine Ecology Progress Series, 477:231-250. <http://www.int-res.com/abstracts/meps/v477/p231-250/>

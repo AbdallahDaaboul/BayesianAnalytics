@@ -1,0 +1,134 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{lmodern}
+\usepackage{amssymb,amsmath}
+\usepackage{ifxetex,ifluatex}
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math}
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\hypersetup{
+  pdftitle={Untitled},
+  pdfauthor={Abdallah Daaboul},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+\urlstyle{same} % disable monospaced font for URLs
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx,grffile}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+
+\title{Untitled}
+\author{Abdallah Daaboul}
+\date{11/14/2020}
+
+\begin{document}
+\maketitle
+
+\hypertarget{exercise-1}{%
+\section{Exercise 1}\label{exercise-1}}
+
+\hypertarget{section}{%
+\subsection{1.}\label{section}}
+
+As given in the statement:
+
+As \(i \rightarrow \infty\)
+
+\(\text{Var}[\theta^{(i)}] = \frac{\sigma^2}{1-\phi^2}\)
+
+\(\text{Corr}([\theta^{(i)},\theta^{(i+t)}] = \phi^t\)
+
+\hypertarget{therfore}{%
+\subsubsection{Therfore}\label{therfore}}
+
+\hypertarget{if-phi-rightarrow-0}{%
+\subsubsection{\texorpdfstring{If
+\(\phi \rightarrow 0\):}{If \textbackslash phi \textbackslash rightarrow 0:}}\label{if-phi-rightarrow-0}}
+
+\(\text{Var}[\theta^{(i)}] = \frac{\sigma^2}{1-0^2} = \sigma^2\)
+
+\(\text{Corr}([\theta^{(i)},\theta^{(i+t)}] = 0^t = 0\)
+
+\hypertarget{if-phi-rightarrow-1-and-since-phiin01-we-replace-phi-with-1-}{%
+\subsubsection{\texorpdfstring{If \(\phi \rightarrow 1\) and since
+\(\phi\in[0,1)\) we replace \(\phi\) with
+\(1^-\):}{If \textbackslash phi \textbackslash rightarrow 1 and since \textbackslash phi\textbackslash in{[}0,1) we replace \textbackslash phi with 1\^{}-:}}\label{if-phi-rightarrow-1-and-since-phiin01-we-replace-phi-with-1-}}
+
+\(\text{Var}[\theta^{(i)}] = \frac{\sigma^2}{1-1^{-^2}} = \frac{\sigma^2}{0^+} = +\infty\)
+
+\(\text{Corr}([\theta^{(i)},\theta^{(i+t)}] = 1^t = 1\)
+
+\hypertarget{section-1}{%
+\subsection{2.}\label{section-1}}
+
+\begin{enumerate}
+\begin{tabular}{c|c|c|c}
+$\text{Var}[\theta^{(i)}]$ & $\phi$ & $\sigma^2$ & $\text{Corr}[\theta^{(i)},\theta^{(i+1)}]$\\
+\hline
+1 & 0 & 1 & 0\\ 
+1 & 0.5 & 0.75 & 0.5\\
+1 & 0.8944272 & 0.2 & 0.8944272\\
+1 & 0.1 & 0.99 & 0.1\\
+\end{tabular}
+\end{enumerate}
+
+\begin{enumerate}
+\item What are the variance of $\theta^{(i)}$ and the correlation between $\theta^{(i)}$ and $\theta^{(i+t)}$ at the limit of large $i$ when $\phi \rightarrow 0$ and when $\phi \rightarrow 1$. Assume that $\sigma$ is fixed in these cases.
+\item Fill in the below table\\ \\
+\begin{tabular}{c|c|c|c}
+$\text{Var}[\theta^{(i)}]$ & $\phi$ & $\sigma^2$ & $\text{Corr}[\theta^{(i)},\theta^{(i+1)}]$\\
+\hline
+1 &     &  1   &  \\ 
+1 & 0.5 &      &   \\
+1 &     &  0.2 & \\
+1 & 0.1 &   & \\
+\end{tabular}
+%What are the values of $\sigma^2$ so that the marginal variance of $\theta^{(i)$ is one 
+\item Implement the above Markov chain with R and use it to sample random realizations of $\theta^{(i)}$ where $i=1,\dots,100$ with the parameter values given in the above table. As an initial value use $C=10$. Plot the sample chain and based on the visual inspection, what can you say about the convergence and mixing properties of the chain with the different choices of $\phi$?
+\item Choose the parameter combination where $\sigma^2=0.2$ from the above table. Run three Markov chains with initial values $C_1 = 10$, $C_2=-10$ and $C_3=5$. Find a burn-in value at which the chains have converged according to the PSRF ($\hat{R}$) statistics. This is implemented in function \texttt{Rhat} in RStan. Note, $m=100$ samples might not be enough here.
+\end{enumerate}
+
+\end{document}

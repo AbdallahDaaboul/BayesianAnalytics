@@ -1,0 +1,201 @@
+---
+title: "Speed of light data analysis"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Instructions
+
+Here we redo the analysis from page 66 in BDA3. The data are available from ex_speedOfLight.dat.
+
+Simon Newcomb conducted experiments on speed of light in 1882. He measured the time required for 
+light to travel a certain distance and here we will analyze a data recorded as deviations from $24,\!800$
+nanoseconds.  The model used in BDA3 is 
+%
+\begin{align*}
+y_i &\sim N(\mu, \sigma^2) \\
+p(\mu,\sigma^2) &\propto \sigma^{-2}.
+\end{align*}
+%
+where $y_i$ is the $i$'th measurement, $\mu$ is the mean of the measurement and $\sigma^{2}$ 
+the variance of the measurements. Notice that this prior is improper ("uninformative"). 
+This corresponds to widely used uniform prior for $\mu$ in the range $(-\infty,\infty)$, and uniform prior for $\log(\sigma)$ (BDA3 pp. 66, 52, and 21). Both priors are improper and 
+cannot be found from Stan. 
+You can use instead
+%
+\begin{align}
+p(\mu) &\sim N(0,(10^3)^2)\nonumber\\ 
+p(\sigma^2) &\sim \text{Inv-}\chi^2(\nu=4,s^2=1)  \label{eq:Inv-chi_prior}
+\end{align}
+
+In this exercise your tasks are the following:
+
+ 1. Write a Stan model for the above model and sample from the posterior of the parameters. Report the posterior mean, variance and 95\% central credible interval for $\mu$ and $\sigma^2$.
+ 2. Additionally draw samples from the posterior predictive distribution of hypothetical new measurement $p(\tilde{y}|y)$. Calculate the mean, variance and 95\% quantile of the posterior predictive distribution. 
+ 3. How does the posterior predictive distribution differ from the posterior 
+of $\mu$ and Why? 
+ 4. Which parts of the model could be interpreted to correspond to aleatory and epistemic uncertainty? Discuss whether this distinction is useful here. 
+ 5. Instead of Inverse-$\chi^2$ distribution the variance parameter prior has traditionally been defined using Gamma distribution for the precision parameter $\tau=1/\sigma^2$. By using the results in Appendix A of BDA3 derive the analytic form of a Gamma prior for the precision corresponding to the prior \eqref{eq:Inv-chi_prior}. This should be of the form $\text{Gamma}(\alpha,\beta)$, where $\alpha$ and $\beta$ are functions of $\nu$ and $s^2$.
+
+**Note!** Many common distributions have multiple parameterizations, for which 
+reason you need to be careful when interpreting others' works. The 
+variance/precision parameter and their priors are notorious for this. The reason 
+is mainly historical since different parameterizations correspond to different 
+analytical solutions.
+
+**Grading:** 2 points from correct answer for each of the above steps.
+
+## Model answers
+
+
+Load the needed libraries into R and set options for multicore computer.
+```{r}
+library(ggplot2)
+library(StanHeaders)
+library(rstan)
+set.seed(123)
+
+options(mc.cores = parallel::detectCores())
+rstan_options(auto_write = TRUE)
+```
+
+**Part 1. **
+
+write the model description, set up initial values for 4 chains and sample from the posterior
+
+```{r}
+y = read.table("ex_speedOfLight.dat" , header=TRUE)
+y = as.vector(y$y)
+y
+```
+
+```{r}
+model="
+data{
+vector[66] y;
+}
+
+parameters{
+real mu;
+real<lower = 0> sigma2;
+}
+
+model{
+mu ~ normal(0,1000);
+sigma2 ~ scaled_inv_chi_square(4,1);
+y ~ normal(mu,sqrt(sigma2));
+}
+
+generated quantities{
+  real y_tilde=normal_rng(mu, sqrt(sigma2));
+}
+"
+
+```
+
+Let's then examine the convergence and autocorrelation of the chains.
+```{r}
+
+dataset <- list("y"=y)
+
+#give initial values for all chains for parameter theta
+init1 <- list (y = -25)
+init2 <- list (y = 50)
+init3 <- list (y = 25)
+
+inits <- list(init1, init2, init3) 
+
+# stan function does all of the work of fitting a Stan model and 
+# returning the results as an instance of stanfit = post in our exercises.
+post=stan(model_code=model,data=dataset,init=inits,
+          warmup=500,iter=1000,chains=3,thin=1)
+
+```
+```{r}
+
+#  Report the posterior mean, variance and 95% central credible interval for
+
+paste("Data mean:", mean(y))
+paste("Data variance:", var(y))
+
+summary(post,pars="sigma2", probs = c(0.025, 0.975))
+summary(post,pars="mu", probs = c(0.025, 0.975))
+
+#Using samples method
+muSamp = as.matrix(post, pars ="mu")
+mean(muSamp)
+var(muSamp)
+
+sigma2Samp = as.matrix(post, pars ="sigma2")
+mean(sigma2Samp)
+var(sigma2Samp)
+
+
+
+```
+
+**Part 2.**
+```{r}
+pred = rep(0,length(muSamp))
+for (i  in 1:length(muSamp) ){
+  pred[i] = rnorm(1,muSamp,sqrt(sigma2Samp) )     
+}
+hist(pred)
+```
+```{r}
+mean(pred)
+```
+```{r}
+var(pred)
+```
+```{r}
+paste(quantile(pred, c(0.025, 0.975)))
+```
+
+### Another method
+Get predictions from the model directly
+```{r}
+# Get params from model
+params = extract(post)
+
+# Get and print y_tilde mean
+paste("Y_tilde mean:", mean(params$y_tilde))
+
+# Get and print y_tilde variance
+paste("Y_tilde variance:", var(params$y_tilde))
+
+# Get and print interval [0.025, 0.975]
+paste("95% central interval (0.025 to 0.975):") 
+paste(quantile(params$y_tilde, c(0.025, 0.975)))
+```
+```
+
+**Part 3**
+```{r}
+params = extract(post)
+# Print mu mean and variance
+paste("Mu mean:", mean(muSamp))
+paste("Mu variance:", var(muSamp))
+
+# Print y_tilde mean and variance
+paste("Y_tilde mean:", mean(pred))
+paste("Y_tilde variance:", var(pred))
+
+# Create histogram of y_tilde and mu
+par(mfrow=c(2,1))
+hist(pred)
+hist(muSamp)
+```
+
+As we can see, the two vectors have a close mean but a different variance. the width of the distribution is much bigger for the predictions ($\tilde{y}$) this is caused by the formula of the predictions $P(\tilde{y}|y)$. In this formula we have a factor $P(\theta|y)$ which is causing the difference in the variance. If we take an infinit number of samples, this problem will be resolved.
+
+**Part 4**
+
+Values $\mu$ and $\sigma2$ are epistemic uncertainty. They will come more precice with larger amount of observations/measurements. At the same
+time, values of $\tilde{y}$ come from normal distribution and therefore it can be considered to belong to aleatory
+uncertainty.
+
+

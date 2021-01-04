@@ -1,0 +1,378 @@
+---
+title: "Mark-recapture method for population size estimation"
+subtitle: "Week2-ex2, problem statement"
+output: html_document
+---
+#Exercise 1
+
+## 1)
+The posterior probability could be calculated as follows:
+
+$P(\lambda |y,\alpha,\beta) = \frac{P(y|\lambda ,\alpha,\beta) * P(\lambda| \alpha,\beta)}{P(y|\alpha,\beta)}$
+
+We know that y follows a $Poisson(\lambda *d)$  distribution and y is an integer between 2 and 7 while $\lambda$ follows a $\gamma(\alpha=1,\beta=1)$ distribution. Therefore the final equation is:
+
+$P(\lambda |2<y<7,\alpha,\beta) = \frac{(\sum_{i=3}^6 {P(y_i|\alpha,\beta)}) *\gamma(\alpha=1,\beta=1) }{P(y|\alpha,\beta)}$ where every $P(y_i|\alpha,\beta)$ follows a $Poisson(\lambda*d)$ distribution and $P(y|\alpha,\beta)$ (the  denominator) will be calculed by summing all the y values.
+
+in R:
+$y = ( dpois(3,lambda*d) +dpois(4,lambda*d)+dpois(5,lambda*d)+dpois(6,lambda*d) ) * dgamma(lambda,shape=1,scale=1)$
+$normalizedY = y/sum(y)$
+
+## 2)
+
+```{r}
+d=6.56
+lambda=seq(0,3,length =101)
+y = ( dpois(3,lambda*d) +dpois(4,lambda*d)+dpois(5,lambda*d)+dpois(6,lambda*d) ) * dgamma(lambda,shape=1,scale=1)
+normalizedY = y/sum(y)
+
+plot(lambda,normalizedY)
+```
+```{r}
+lambda[which.max(normalizedY)]
+```
+
+## 3a)
+```{r}
+YcP = cumsum(normalizedY)
+plot(lambda,YcP)
+
+```
+## 3b)
+```{r}
+sum(normalizedY[which(lambda>1)])
+```
+## 4
+```{r}
+d=6.56
+lambda=seq(0,3,length =101)
+y = dpois(6,lambda*d)  * dgamma(lambda,shape=1,scale=1)
+normalizedY = y/sum(y)
+
+plot(lambda,normalizedY)
+```
+```{r}
+sum(normalizedY[which(lambda>1)])
+```
+```{r}
+lambda[which.max(normalizedY)]
+```
+
+The two distributions have a similar form but the last one undergoes a slight translation to the right compared to the first one. The peak changes from lambda = 0.54 to lambda = 0.78.
+
+##5
+```{r}
+# Create lambda
+lambda <- seq(0,3,length=100)
+# Calculate prior
+prior <- dgamma(lambda, 1, 1)
+# Calculate likelyhood
+likelyhood <- sum(dpois(x=6, lambda = 0.5))
+# Calculate posterior predictive
+posteriorPred <- likelyhood*prior
+# Normalize so that sum becomes 1
+posteriorPred <- posteriorPred/sum(posteriorPred)
+  
+# Plot the data
+plot(lambda, posteriorPred, main="Predictive lambda probability distibution")
+lines(lambda, posteriorPred, col = 'black')
+```
+
+
+# Exercise 2 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+
+This exercise serves also as an example to Bayesian inference and summarizing posterior probability distribution of discrete variables using exact probabilities and Monte Carlo method. Hence, go through the whole file before starting to do the exercise.
+
+## Mark-recapture method
+
+The basic idea in mark-recapture method for estimating animal populations is that a researcher visits a study area and captures a group of individuals. Each of these individuals is marked with a unique identifier (e.g., a numbered tag, ring or band), and is released back into the  environment. Sufficient time is allowed to pass for the marked individuals to redistribute themselves among the unmarked population. After a while, the researcher returns and  captures another sample of individuals. 
+
+Assumptions in the basic implementation of the method are, among others, that the time between consecutive captures is long enough for "perfect mixing", marks are not lost, the behavior and capture probability of an individual does not change due to marking and that the study population is "closed". In other words, the two visits to the study area  are close enough in time so that no individuals die, are born, move into the study area (immigrate) or move out of the study area (emigrate) between visits. If these assumptions hold, we can reasonably assume that the *marked animals are randomly distributed in the total population" which then allows for inference on the total population size.
+
+This method is illustrated during the lecture where we estimate the number of balls in a bag (the total *population* comprises of all the balls in the bag).
+
+Let $N$ denote the total population size, $M$ the number of marked individuals at first visit, $C$ the total number of animals captured at the second time and $R$ the number of recaptured animals. By assuming that $N$ is large compared to $M$ and that the marked individuals are randomly distributed in the population, we can use Binomial distribution as our observation model for $R$ as follows
+\begin{equation}
+     p(R|C,M,N) = \mathrm{Bin}(R| C, M/N) 
+\end{equation}
+We have to define a prior for $N$ after which we can solve its posterior 
+\begin{equation}
+     p(N|M,C,R) \propto \mathrm{Bin}(R| C, M/N) p(N)
+\end{equation}
+
+The number of marked balls is 
+```{r}
+M=25
+```
+
+We will now analyze the total number of balls in the bag. This will be done first by exact calculations with discrete valued $N$ and after that using Markov chain Monte Carlo.
+
+## Conduct the inference with discretization
+
+Since there is only one, discrete, variable that we are interested in, we can easily discretize the problem and work with array(s) of probabilities
+
+Let's define an array of values $N$ that we think are a priori plausible at all. The below values are "hard" limits. Prior probability below the minimum and above the maximum is zero
+```{r}
+abs_min <- M    # the number of balls cannot be negative
+abs_max <- 500  # No way that bag can contain more than 1000 balls (a subjective assumption)
+
+
+# Define the evaluation points so that all integers between 
+# abs_min and abs_max are included
+Nseq <- seq(abs_min, abs_max, length=abs_max-abs_min+1)  
+```
+
+Next we define prior for $N$ and draw it.
+
+Now that we have a discrete variable we have to give a prior probability for each of the elements in Nseq. You  can do this in multiple ways. Here are few examples:
+```{r}
+
+par(mfrow=c(2,3))              # Open figure for plotting the examples
+
+# uniform prior
+Nprior <- rep(1,length(Nseq))/length(Nseq)  
+sum(Nprior)              # check that prior probabilities sum up to to one
+plot(Nseq,Nprior, main="Uniform prior", xlab="N", pch=16)
+# "Gaussian" prior
+Nprior <- dnorm(Nseq, mean=50, sd=20)
+Nprior <- Nprior/sum(Nprior)     # Normalize the prior probabilities to sum to one
+sum(Nprior)        # check that prior probabilities sum up to to one
+plot(Nseq,Nprior, main="Gaussian prior", xlab="N", pch=16)
+# log-Gaussian prior
+Nprior <- dlnorm(Nseq, mean=5, sd=1)
+Nprior <- Nprior/sum(Nprior)   # Normalize the prior probabilities to sum to one
+sum(Nprior)        # check that prior probabilities sum up to to one
+plot(Nseq,Nprior, main="log-Gaussian prior", xlab="N", pch=16)
+# Step wise prior by giving different relative weights for different values
+Nprior <- rep(1,length(Nseq))  
+Nprior[Nseq>50 & Nseq<600] <- 2  
+Nprior[Nseq>70 & Nseq<400] <- 4  
+Nprior[Nseq>200 & Nseq<300] <- 6  
+Nprior <- Nprior/sum(Nprior)    # Normalize the prior probabilities to sum to one
+sum(Nprior)        # check that prior probabilities sum up to to one
+plot(Nseq,Nprior, main="Step-wise prior", xlab="N", pch=16)
+
+# --- Here we will fill in the prior defined during the lecture ---
+Nprior <- dlnorm(Nseq, mean=5.05, sd=1.1)
+Nprior <- Nprior/sum(Nprior)    # Normalize to sum to one
+sum(Nprior)                     # check that prior probabilities sum up to to one
+
+plot(Nseq,Nprior, main="My own prior", xlab="N", pch=16)
+```
+
+Now that we have defined the vector of prior probabilities for different values of $N$ we can can conduct the second sampling round, to obtain data $C$ and $R$, and after that calculate the posterior distribution for it by using the Bayes Theorem explicitly
+
+```{r}
+# The result from the other sampling time
+C=22
+R=3
+
+Nposterior <- Nprior*dbinom(R,C,M/Nseq)  # numerator of Bayes theorem
+Nposterior <- Nposterior/sum(Nposterior) # divide by marginal likelihood
+plot(Nseq,Nposterior, main="The posterior distribution", xlab="N", pch=16)
+```
+
+Given the vector of posterior probabilities for different values of $N$ we can calculate various summaries for the posterior distribution. Such as the posterior mean.
+```{r}
+posteriorMean = sum(Nposterior*Nseq)
+print(posteriorMean)
+```
+
+In order to calculate quantiles, we need to first calculate the cumulative distribution function
+```{r}
+NposteriorCDF <- cumsum(Nposterior)           
+# Plot CDF
+plot(Nseq,NposteriorCDF, main="posterior CDF", xlab="N", pch=16)
+```
+
+Now we can calculate, for example, the 90% posterior quantile
+```{r}
+# 10% quantile is the last N at which CDF is under 10%
+Nseq[which(NposteriorCDF>=0.1)[1]-1]
+# 90% quantile is the first N at which CDF is over 90%
+Nseq[which(NposteriorCDF>=0.9)[1]]
+```
+
+## Analysis using Monte Carlo
+
+Next, we conduct the analysis using Monte Carlo technique. Here the idea is to draw random samples from the posterior distribution of $N$ and then use these to calculate summaries of the posterior distribution.
+
+In this example, we will draw the samples using a technique that utilizes the inverse cumulative distribution function of the posterior. Note, this technique is not part of the learning goals of the course so you can jump over the next code block. However, if you are interested in the technique see page 23 in BDA3.
+```{r}
+Nsamp = Nseq[sapply(runif(1000,min=0,max=1),function(temp){ which(NposteriorCDF>=temp)[1] })]
+```
+
+We can now use the vector Nsamp as a collection of random samples from the posterior distribution. Hence, let's draw the histogram of them and calculate the mean and 10 % and 90 % quantiles
+
+```{r}
+hist(Nsamp)
+mean(Nsamp)
+quantile(Nsamp,probs=c(0.1,0.9))
+```
+
+# Exercise for week 2
+
+Calculate the posterior median, variance, standard deviation, and 80% central posterior interval using:
+
+1. the vectorized form of the posterior probablity distribution (that is, the vectors Nseq, Nposterior, NposteriorCDF)
+2. the Monte Carlo approximation using the random samples from the posterior that are stored in Nsamp
+3. Additionally, why aren't the results from the above two approaches identical? How could you get them to match in theory?
+```{r}
+#1
+paste("part 1")
+
+posteriorMedian = Nseq[which(NposteriorCDF>=0.5)[1]-1]
+paste("posteriorMedian = ",posteriorMedian)
+
+posteriorVar = sum(Nposterior* Nseq^2) - posteriorMean^2
+paste("posteriorVar = ",posteriorVar)
+
+posteriorSD = sqrt(posteriorVar)
+paste("posteriorSD = ",posteriorSD)
+
+# 10% quantile is the last N at which CDF is under 10%
+l1=Nseq[which(NposteriorCDF>=0.1)[1]-1]
+# 90% quantile is the first N at which CDF is over 90%
+l2=Nseq[which(NposteriorCDF>=0.9)[1]]
+paste("80% central posterior interval =",l1,l2)
+
+#2
+paste("part 2")
+posteriorMedianMC = median(Nsamp)
+paste("posteriorMedianMC = ",posteriorMedianMC)
+posteriorVarMC = var(Nsamp)
+paste("posteriorVarMC = ",posteriorVarMC)
+posteriorSDMC = sqrt(posteriorVarMC)  
+paste("posteriorSDMC = ",posteriorSDMC)
+l=quantile(Nsamp,probs=c(0.1,0.9))
+paste("80% central posterior interval for monte carlo:")
+paste(l)
+```
+The results from the above two approaches aren't identical because more samples are needed so the Monte Carlo method could converge to the real answer. In theory, n tends towards infinity.
+
+
+
+
+# EX3
+
+
+We will use equation 3 :  $P(\theta|N, y )\propto  Beta(\alpha + y, \beta + N − y)$
+
+In our case : prior probability of $\theta_c$ is uniform between 0 and 1, and that the parameters $\theta_c$ are mutually independent. Therefore $\alpha=\beta=1$. For every value of Cov we will sum both cases where y=0 and y=1 to get the total N for each one. y will be replaced by the cases where y=1 for each case. Therefore, by replacing these values in the equation 3, we get: 
+
+$P(\theta_0|N=277,y=212) \propto Beta(213,66)$
+$P(\theta_1|N=225,y=121) \propto Beta(122,105)$
+
+```{r}
+sample_Theta0 = rbeta(10000000,213,66)
+sample_Theta1 = rbeta(10000000,122,105)
+
+hist(sample_Theta0)
+hist(sample_Theta1)
+```
+## 2
+```{r}
+paste("mean for Theta0 = ",mean(sample_Theta0))
+paste("sd for Theta0 = ",sd(sample_Theta0))
+
+paste("mean for Theta0 = ",mean(sample_Theta1))
+paste("sd for Theta0 = ",sd(sample_Theta1))
+```
+
+## 3
+
+```{r}
+phi = sample_Theta0 - sample_Theta1
+hist(phi)
+```
+
+the posterior probability that $\theta_1  < \theta_0$ is :
+```{r}
+sum(sample_Theta1 < sample_Theta0) / 10000000
+```
+
+## 4
+In the case where we change the prior probability the values of alpha and beta will change. Therefore, I will try different combinations of alpha and beta and figure out what is changing.
+
+### alpha = 50 ; beta =1
+```{r}
+sample_Theta0 = rbeta(10000000,213+50,66)
+sample_Theta1 = rbeta(10000000,122+50,105)
+
+hist(sample_Theta0)
+hist(sample_Theta1)
+```
+
+```{r}
+paste("mean for Theta0 = ",mean(sample_Theta0))
+paste("sd for Theta0 = ",sd(sample_Theta0))
+
+paste("mean for Theta1 = ",mean(sample_Theta1))
+paste("sd for Theta1 = ",sd(sample_Theta1))
+```
+
+the posterior probability that $\theta_1  < \theta_0$ is :
+
+```{r}
+sum(sample_Theta1 < sample_Theta0) / 10000000
+```
+
+### alpha = 1 ; beta =50
+```{r}
+sample_Theta0 = rbeta(10000000,213,66+50)
+sample_Theta1 = rbeta(10000000,122,105+50)
+
+hist(sample_Theta0)
+hist(sample_Theta1)
+```
+
+```{r}
+paste("mean for Theta0 = ",mean(sample_Theta0))
+paste("sd for Theta0 = ",sd(sample_Theta0))
+
+paste("mean for Theta1 = ",mean(sample_Theta1))
+paste("sd for Theta1 = ",sd(sample_Theta1))
+```
+
+the posterior probability that $\theta_1  < \theta_0$ is :
+
+```{r}
+sum(sample_Theta1 < sample_Theta0) / 10000000
+```
+
+### alpha = 50 ; beta =50
+```{r}
+sample_Theta0 = rbeta(10000000,213+50,66+50)
+sample_Theta1 = rbeta(10000000,122+50,105+50)
+
+hist(sample_Theta0)
+hist(sample_Theta1)
+```
+
+```{r}
+paste("mean for Theta0 = ",mean(sample_Theta0))
+paste("sd for Theta0 = ",sd(sample_Theta0))
+
+paste("mean for Theta1 = ",mean(sample_Theta1))
+paste("sd for Theta1 = ",sd(sample_Theta1))
+```
+
+the posterior probability that $\theta_1  < \theta_0$ is :
+
+```{r}
+sum(sample_Theta1 < sample_Theta0) / 10000000
+```
+
+We can see from the results, than changing $\alpha$ and $\beta$ changes location of the peak and also the distibution. 
+
+When we increase $\beta$, then distibution moves to left so the peak is on the smaller theta than it was in original distibution.
+
+When we increase $\alpha$, then distribution moves right so peak moves to on the larger value than in original distribution
+
+When we increase both $\alpha$ and beta, then the peak moves left, but at the same time probabilities are more tighly packed around the peak.
+What I have written. Biggest difference seems to be, than location of the peak changes

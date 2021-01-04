@@ -1,0 +1,46 @@
+---
+title: "Untitled"
+author: "Abdallah Daaboul"
+date: "11/14/2020"
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Exercise 1
+## 1.
+As given in the statement:
+
+As $i \rightarrow \infty$ 
+
+$\text{Var}[\theta^{(i)}] = \frac{\sigma^2}{1-\phi^2}$ 
+
+$\text{Corr}([\theta^{(i)},\theta^{(i+t)}] = \phi^t$
+
+### Therfore
+
+### If $\phi \rightarrow 0$:
+
+$\text{Var}[\theta^{(i)}] = \frac{\sigma^2}{1-0^2} = \sigma^2$ 
+
+$\text{Corr}([\theta^{(i)},\theta^{(i+t)}] = 0^t = 0$
+
+### If $\phi \rightarrow 1$ and since $\phi\in[0,1)$ we replace $\phi$ with $1^-$:
+
+$\text{Var}[\theta^{(i)}] = \frac{\sigma^2}{1-1^{-^2}} = \frac{\sigma^2}{0^+} = +\infty$ 
+
+$\text{Corr}([\theta^{(i)},\theta^{(i+t)}] = 1^t = 1$
+
+## 2.
+
+\begin{enumerate}
+\begin{tabular}{c|c|c|c}
+$\text{Var}[\theta^{(i)}]$ & $\phi$ & $\sigma^2$ & $\text{Corr}[\theta^{(i)},\theta^{(i+1)}]$\\
+\hline
+1 & 0 & 1 & 0\\ 
+1 & 0.5 & 0.75 & 0.5\\
+1 & 0.8944272 & 0.2 & 0.8944272\\
+1 & 0.1 & 0.99 & 0.1\\
+\end{tabular}
+\end{enumerate}
+

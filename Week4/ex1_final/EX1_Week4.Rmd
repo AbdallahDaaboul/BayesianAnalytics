@@ -1,0 +1,164 @@
+---
+title: "EX1_Week4"
+author: "Abdallah"
+date: "11/23/2020"
+output: pdf_document
+---
+
+# Ex1
+
+# Task  a
+### a)
+
+$P(y_1,...,y_n,\theta,\alpha) = p(\alpha)\prod_{i=1}^n p(y_i|\theta)p(\theta_i|\alpha)$
+
+Stan pseudo_code:
+```{r, eval=FALSE}
+data {
+  int <lower = 0> n;
+  real y[n];
+}
+
+parameters {
+  real alpha;
+  real theta[n];
+}
+
+model{
+  alpha ~ p()
+  for (i in 1:n){
+    theta[i] ~ p(alpha)
+  }
+  
+  for (i in 1:n){
+    y[i] ~ p(theta[i])
+  }
+}
+```
+
+### b) 
+$P(y_1,...,y_n,\theta,\mu,\alpha) = p(\alpha)\prod_{i=1}^m p(\mu_i|\alpha) \prod_{k=1}^n p(y_{i,k}|\theta_{i,k})p(\theta_{i,k}|\mu_i)$
+
+Stan pseudo_code:
+```{r, eval=FALSE}
+data {
+  int <lower = 0> n;
+  int <lower = 0> m;
+  real y[m,n];
+}
+
+parameters {
+  real alpha;
+  real theta[m,n];
+  real mu[m];
+}
+
+model{
+  alpha ~ p()
+  
+  for (i in 1:m) {
+    mu[i] ~ p(alpha)
+  }
+  
+  for (i in 1:m){
+    for (k in 1:n) {
+     Theta[i,k] ~ mu[i] 
+    }
+  }
+  
+  for (i in 1:m){
+    for (k in 1:n) {
+     y[i,k] ~ Theta[i,k]
+    }
+  }
+  
+}
+```
+
+### c) 
+$P(y_1,...,y_n,\mu,\alpha,\gamma) = p(\alpha)p(\gamma)\prod_{i=1}^n p(y_i|\mu_i,\sigma_i)p(\mu_i|x_i,\alpha) p(\sigma_{i}|x_i,\gamma)$
+
+Stan pseudo_code:
+```{r, eval=FALSE}
+data {  
+  int <lower = 0> n;
+  real y[n];
+  real x[n];
+}
+
+parameters {
+  real alpha;
+  real gamma;
+  
+
+  real mu[n];
+  real sigma[n];
+}
+
+model{
+  alpha ~ p()
+  gamma ~ p()
+  for (i in 1:n) {
+    x[i] ~ p()
+  }
+  
+  for (i in 1:n) {
+    mu[i] ~ p(alpha) * p(x[i])
+  }
+  
+  for (i in 1:n) {
+    sigma[i] ~ p(gamma) * p(x[i])
+  }
+  for (i in 1:n){
+     y[i] ~ p(sigma[i]) * p(mu[i])
+  }
+
+}
+```
+
+
+## Task d
+
+![Schema](/home/dexter/Schema.PNG)
+```{r, eval=FALSE}
+data {
+  int <lower = 0> n;
+  int <lower = 0> J;
+
+  real y[n][J];
+}
+
+parameters {
+  real mu0;
+  real mu[n];
+  real v1;
+  real S12; 
+  real Phi;
+  real v2
+  real S22
+  
+  real sigma2[n];
+}
+
+model{
+  
+  mu0 ~ normal(0,10^3) #N(0, 10^6)
+  
+  v1 ~ p()
+  v2 ~ p()
+  S12 ~ p()
+  S22 ~ p()
+  phi ~ p(v1) * p(S12)
+  
+  for (i in 1:j ){
+    sigma2[i] ~ p(v2) * p(S22)
+  }
+  
+  for (i in 1:n){
+    for ( j in 1:J)
+     y[i,j] ~ p(sigma[j]) * p(mu[j])
+  }
+
+}
+```
+
